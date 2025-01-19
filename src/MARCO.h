@@ -1,21 +1,20 @@
 #pragma once
-
+#include "Common.h"
 #include "MapTools.h"
+#include "BaseManager.h"
 
-#include <BWAPI.h>
 
 class MARCO
 {
     MapTools m_mapTools;
+	BaseManager m_baseManager;
 
 public:
 
     MARCO();
 
     // helper functions to get you started with bot programming and learn the API
-    void sendIdleWorkersToMinerals();
-    void trainAdditionalWorkers();
-    void buildAdditionalSupply();
+
     void drawDebugInformation();
 
     // functions that are triggered by various BWAPI events from main.cpp

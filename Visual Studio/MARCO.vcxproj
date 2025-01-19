@@ -19,6 +19,9 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\src\Base.h" />
+    <ClInclude Include="..\src\BaseManager.h" />
+    <ClInclude Include="..\src\Common.h" />
     <ClInclude Include="..\src\Grid.hpp" />
     <ClInclude Include="..\src\MapTools.h" />
     <ClInclude Include="..\src\ReplayParser.h" />
@@ -26,6 +29,9 @@
     <ClInclude Include="..\src\Tools.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="..\src\Base.cpp" />
+    <ClCompile Include="..\src\BaseManager.cpp" />
+    <ClCompile Include="..\src\Common.cpp" />
     <ClCompile Include="..\src\main.cpp" />
     <ClCompile Include="..\src\MapTools.cpp" />
     <ClCompile Include="..\src\MARCO.cpp" />
