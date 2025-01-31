@@ -1,9 +1,14 @@
 #include "MapTools.h"
+#include "Tools.h"
 
 #include <iostream>
 #include <sstream>
 #include <fstream>
 #include <array>
+
+const size_t LegalActions = 4;
+const int actionX[LegalActions] = { 1, -1, 0, 0 };
+const int actionY[LegalActions] = { 0, 0, 1, -1 };
 
 // constructor for MapTools
 MapTools::MapTools()
@@ -26,6 +31,7 @@ void MapTools::onStart()
     m_depotBuildable = Grid<int>(m_width, m_height, 0);
     m_lastSeen       = Grid<int>(m_width, m_height, 0);
     m_tileType       = Grid<char>(m_width, m_height, 0);
+    m_sectorNumber = Grid<int>(m_width, m_height, 0);
 
     // Set the boolean grid data from the Map
     for (int x(0); x < m_width; ++x)
@@ -73,6 +79,8 @@ void MapTools::onStart()
                 }
             }
         }
+        computeConnectivity();
+       
     }
 
     // set the other tile types
@@ -274,10 +282,31 @@ void MapTools::drawTile(int tileX, int tileY, const BWAPI::Color & color) const
     const int py        = tileY*32 + padding;
     const int d         = 32 - 2*padding;
 
+    //Typing Int to char* for printing connectivity 
+    std::string s = std::to_string(getSectorNumber(tileX,tileY));
+    char const* pchar = s.c_str();
+
     BWAPI::Broodwar->drawLineMap(px,     py,     px + d, py,     color);
     BWAPI::Broodwar->drawLineMap(px + d, py,     px + d, py + d, color);
     BWAPI::Broodwar->drawLineMap(px + d, py + d, px,     py + d, color);
     BWAPI::Broodwar->drawLineMap(px,     py + d, px,     py,     color);
+    BWAPI::Broodwar->drawText(BWAPI::CoordinateType::Map, px+14, py+14, pchar);
+    
+}
+
+void MapTools::drawMiniTile(int tileX, int tileY, const BWAPI::Color& color) const
+{
+    const int padding = 2;
+    const int px = tileX * 8 + padding;
+    const int py = tileY * 8 + padding;
+    const int d = 8 - 2 * padding;
+
+    BWAPI::Broodwar->drawLineMap(px, py, px + d, py, color);
+    BWAPI::Broodwar->drawLineMap(px + d, py, px + d, py + d, color);
+    BWAPI::Broodwar->drawLineMap(px + d, py + d, px, py + d, color);
+    BWAPI::Broodwar->drawLineMap(px, py + d, px, py, color);
+
+    
 }
 
 bool MapTools::canWalk(int tileX, int tileY) const
@@ -322,6 +351,7 @@ void MapTools::draw() const
                 if (isWalkable(x, y) && !isBuildable(x, y)) { color = BWAPI::Color(255, 255, 0); }
                 if (isBuildable(x, y) && !isDepotBuildableTile(x, y)) { color = BWAPI::Color(127, 255, 255); }
                 drawTile(x, y, color);
+                
             }
         }
     }
@@ -331,7 +361,8 @@ void MapTools::draw() const
     const char white = '\x04';
     const char yellow = '\x03';
 
-    BWAPI::Broodwar->drawBoxScreen(0, 0, 200, 100, BWAPI::Colors::Black, true);
+    //DRAWS THE LEGEND TO EXPLAIN UI
+   /* BWAPI::Broodwar->drawBoxScreen(0, 0, 200, 100, BWAPI::Colors::Black, true);
     BWAPI::Broodwar->setTextSize(BWAPI::Text::Size::Huge);
     BWAPI::Broodwar->drawTextScreen(10, 5, "%cMap Legend", white);
     BWAPI::Broodwar->setTextSize(BWAPI::Text::Size::Default);
@@ -342,9 +373,7 @@ void MapTools::draw() const
     BWAPI::Broodwar->drawTextScreen(10, 60, "%cYellow:", yellow);
     BWAPI::Broodwar->drawTextScreen(60, 60, "%cResource Tile, Can't Build", white);
     BWAPI::Broodwar->drawTextScreen(10, 75, "Teal:");
-    BWAPI::Broodwar->drawTextScreen(60, 75, "%cCan't Build Depot", white);
-
-    
+    BWAPI::Broodwar->drawTextScreen(60, 75, "%cCan't Build Depot", white);*/
 }
 
 std::string MapTools::fixMapName(const std::string& s) const
@@ -360,4 +389,63 @@ std::string MapTools::fixMapName(const std::string& s) const
     }
 
     return ss.str();
+}
+
+int MapTools::getSectorNumber(int x, int y) const
+{
+    if (!isValidTile(x, y))
+    {
+        return 0;
+    }
+
+    return m_sectorNumber.get(x, y);
+}
+
+void MapTools::computeConnectivity()
+{
+    // the fringe data structe we will use to do our BFS searches
+    std::vector<std::array<int, 2>> fringe;
+    fringe.reserve(m_width * m_height);
+    int sectorNumber = 0;
+
+    // for every tile on the map, do a connected flood fill using BFS
+    for (int x = 0; x < m_width; ++x)
+    {
+        for (int y = 0; y < m_height; ++y)
+        {
+            // if the sector is not currently 0, or the map isn't walkable here, then we can skip this tile
+            if (getSectorNumber(x, y) != 0 || !isWalkable(x, y))
+            {
+                continue;
+            }
+
+            // increase the sector number, so that walkable tiles have sectors 1-N
+            sectorNumber++;
+
+            // reset the fringe for the search and add the start tile to it
+            fringe.clear();
+            fringe.push_back({ x,y });
+            m_sectorNumber.set(x, y, sectorNumber);
+
+            // do the BFS, stopping when we reach the last element of the fringe
+            for (size_t fringeIndex = 0; fringeIndex < fringe.size(); ++fringeIndex)
+            {
+                auto& tile = fringe[fringeIndex];
+
+                // check every possible child of this tile
+                for (size_t a = 0; a < LegalActions; ++a)
+                {
+                    const int nextX = tile[0] + actionX[a];
+                    const int nextY = tile[1] + actionY[a];
+
+                    // if the new tile is inside the map bounds, is walkable, and has not been assigned a sector, add it to the current sector and the fringe
+                    if (isValidTile(nextX, nextY) && isWalkable(nextX, nextY) && (getSectorNumber(nextX, nextY) == 0))
+                    {
+                        m_sectorNumber.set(nextX, nextY, sectorNumber);
+                        fringe.push_back({ nextX, nextY });
+                    }
+                }
+            }
+        }
+    }
 }

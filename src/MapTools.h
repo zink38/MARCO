@@ -13,11 +13,15 @@ class MapTools
     Grid<int>   m_depotBuildable; // whether a depot is buildable on a tile (illegal within 3 tiles of static resource)
     Grid<int>   m_lastSeen;       // the last time any of our units has seen this position on the map
     Grid<char>  m_tileType;       // StarDraft tile type
+    Grid<int> m_sectorNumber;
+
     int         m_width = 0;
     int         m_height = 0;
     int         m_frame = 0;
     bool        m_drawMap = false;
 
+    int  getSectorNumber(int x, int y) const;
+    void computeConnectivity();
     bool canBuild(int tileX, int tileY) const;
     bool canWalk(int tileX, int tileY) const;
     void printMap() const;
@@ -51,4 +55,6 @@ public:
     bool    isBuildable(const BWAPI::TilePosition& tile) const;
     bool    isDepotBuildableTile(int tileX, int tileY) const;
     void    drawTile(int tileX, int tileY, const BWAPI::Color & color) const;
+    void    drawMiniTile(int tileX, int tileY, const BWAPI::Color& color) const;
+
 };
