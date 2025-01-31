@@ -14,6 +14,7 @@ class MapTools
     Grid<int>   m_lastSeen;       // the last time any of our units has seen this position on the map
     Grid<char>  m_tileType;       // StarDraft tile type
     Grid<int> m_sectorNumber;
+    Grid<int> m_areaNumber;
 
     int         m_width = 0;
     int         m_height = 0;
@@ -22,6 +23,8 @@ class MapTools
 
     int  getSectorNumber(int x, int y) const;
     void computeConnectivity();
+    void computeAreas();
+    int  getAreaNumber(int x, int y) const;
     bool canBuild(int tileX, int tileY) const;
     bool canWalk(int tileX, int tileY) const;
     void printMap() const;

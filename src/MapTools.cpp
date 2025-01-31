@@ -32,6 +32,7 @@ void MapTools::onStart()
     m_lastSeen       = Grid<int>(m_width, m_height, 0);
     m_tileType       = Grid<char>(m_width, m_height, 0);
     m_sectorNumber = Grid<int>(m_width, m_height, 0);
+    m_areaNumber = Grid<int>(m_width, m_height, 0);
 
     // Set the boolean grid data from the Map
     for (int x(0); x < m_width; ++x)
@@ -80,7 +81,7 @@ void MapTools::onStart()
             }
         }
         computeConnectivity();
-       
+        computeAreas();
     }
 
     // set the other tile types
@@ -283,7 +284,7 @@ void MapTools::drawTile(int tileX, int tileY, const BWAPI::Color & color) const
     const int d         = 32 - 2*padding;
 
     //Typing Int to char* for printing connectivity 
-    std::string s = std::to_string(getSectorNumber(tileX,tileY));
+    std::string s = std::to_string(getAreaNumber(tileX,tileY));
     char const* pchar = s.c_str();
 
     BWAPI::Broodwar->drawLineMap(px,     py,     px + d, py,     color);
@@ -401,6 +402,16 @@ int MapTools::getSectorNumber(int x, int y) const
     return m_sectorNumber.get(x, y);
 }
 
+int MapTools::getAreaNumber(int x, int y) const
+{
+    if (!isValidTile(x, y))
+    {
+        return 0;
+    }
+
+    return m_areaNumber.get(x, y);
+}
+
 void MapTools::computeConnectivity()
 {
     // the fringe data structe we will use to do our BFS searches
@@ -442,6 +453,55 @@ void MapTools::computeConnectivity()
                     if (isValidTile(nextX, nextY) && isWalkable(nextX, nextY) && (getSectorNumber(nextX, nextY) == 0))
                     {
                         m_sectorNumber.set(nextX, nextY, sectorNumber);
+                        fringe.push_back({ nextX, nextY });
+                    }
+                }
+            }
+        }
+    }
+}
+
+void MapTools::computeAreas()
+{
+    // the fringe data structe we will use to do our BFS searches
+    std::vector<std::array<int, 2>> fringe;
+    fringe.reserve(m_width * m_height);
+    int areaNumber = 0;
+
+    // for every tile on the map, do a connected flood fill using BFS
+    for (int x = 0; x < m_width; ++x)
+    {
+        for (int y = 0; y < m_height; ++y)
+        {
+            // if the sector is not currently 0, or the map isn't walkable here, then we can skip this tile
+            if (getAreaNumber(x, y) != 0 || !isWalkable(x, y) || !isBuildable(x,y))
+            {
+                continue;
+            }
+
+            // increase the sector number, so that walkable tiles have sectors 1-N
+            areaNumber++;
+
+            // reset the fringe for the search and add the start tile to it
+            fringe.clear();
+            fringe.push_back({ x,y });
+            m_areaNumber.set(x, y, areaNumber);
+
+            // do the BFS, stopping when we reach the last element of the fringe
+            for (size_t fringeIndex = 0; fringeIndex < fringe.size(); ++fringeIndex)
+            {
+                auto& tile = fringe[fringeIndex];
+
+                // check every possible child of this tile
+                for (size_t a = 0; a < LegalActions; ++a)
+                {
+                    const int nextX = tile[0] + actionX[a];
+                    const int nextY = tile[1] + actionY[a];
+
+                    // if the new tile is inside the map bounds, is walkable, and has not been assigned a sector, add it to the current sector and the fringe
+                    if (isValidTile(nextX, nextY) && isWalkable(nextX, nextY) && isBuildable(nextX, nextY) && (getAreaNumber(nextX, nextY) == 0))
+                    {
+                        m_areaNumber.set(nextX, nextY, areaNumber);
                         fringe.push_back({ nextX, nextY });
                     }
                 }

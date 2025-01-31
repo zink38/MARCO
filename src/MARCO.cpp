@@ -26,6 +26,7 @@ void MARCO::onStart()
     m_baseManager = BaseManager();
     std::unique_ptr<Base> base = std::make_unique<Base>();
     m_baseManager.addBase(std::move(base));
+    BWAPI::Broodwar->sendText("black sheep wall");
 }
 
 // Called on each frame of the game
